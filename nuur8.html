@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Газарзүй VIII - Монгол орны усны нөөц</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --primary: #1a237e; --accent: #00d2ff; --success: #2ecc71; --error: #e74c3c; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #050b18 url('https://www.transparenttextures.com/patterns/stardust.png'); 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; margin: 0; color: white; overflow-x: hidden;
+        }
+        #quiz-container { 
+            background: rgba(255, 255, 255, 0.05); 
+            backdrop-filter: blur(15px);
+            padding: 30px; border-radius: 20px; 
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.2); 
+            width: 90%; max-width: 500px; text-align: center; 
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .hidden { display: none !important; }
+        .option-btn { 
+            width: 100%; padding: 12px; margin: 6px 0; 
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; 
+            background: rgba(255,255,255,0.1); cursor: pointer; 
+            font-size: 0.95rem; transition: 0.3s; color: white; 
+        }
+        .option-btn:hover { background: rgba(0, 210, 255, 0.2); border-color: var(--accent); }
+        input[type="text"] { 
+            width: 80%; padding: 12px; border-radius: 8px; border: none; 
+            margin-bottom: 20px; font-size: 1rem; text-align: center; 
+        }
+        .start-btn { 
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5); color: white; border: none; 
+            padding: 15px 40px; border-radius: 30px; 
+            font-size: 1.2rem; font-weight: bold; cursor: pointer; 
+        }
+        #timer-display { font-size: 2.2rem; font-weight: 900; color: #ffeb3b; text-shadow: 0 0 10px rgba(255,235,59,0.5); }
+        #feedback-icon { 
+            position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); 
+            font-size: 6rem; z-index: 1000; pointer-events: none; 
+        }
+        .space-img { width: 100%; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div id="feedback-icon"></div>
+
+    <div id="setup-screen">
+        <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=500" class="space-img" alt="Cosmos">
+        <h2 style="margin-top:0;">ГАЗАРЗҮЙ VIII</h2>
+        <p>Монгол орны усны нөөц бүлэг</p>
+        <input type="text" id="student-name" placeholder="Нэрээ энд бичнэ үү...">
+        <br>
+        <button class="start-btn" onclick="startQuiz()">АЯЛАЛЫГ ЭХЛЭХ 🌍</button>
+    </div>
+
+    <div id="quiz-screen" class="hidden">
+        <div id="timer-display">30</div>
+        <p id="q-count" style="font-size: 0.8rem; color: #aaa;"></p>
+        <p id="question-text" style="font-weight: bold; font-size: 1.1rem; min-height: 60px; margin: 15px 0;"></p>
+        <div id="options-container"></div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <h2>Судалгаа дууслаа! 🛰️</h2>
+        <h1 id="final-score" style="font-size: 3.5rem; color: var(--accent); margin: 10px 0;"></h1>
+        <p id="feedback-msg" style="font-weight: bold; padding: 0 10px;"></p>
+        <p id="status-text" style="color: #64b5f6; font-style: italic; margin-top: 20px;">Мэдээллийг системд бүртгэж байна...</p>
+        <button onclick="location.reload()" style="background:none; border:1px solid white; color:white; padding:8px 15px; border-radius:5px; cursor:pointer;">Дахин оролдох</button>
+    </div>
+</div>
+
+<audio id="snd-correct" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
+<audio id="snd-wrong" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3"></audio>
+<audio id="snd-win" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"></audio>
+
+<script>
+    const questions = [
+        { q: "Монгол орны гадаргын усны нөөцийн дийлэнх хэсгийг юу бүрдүүлдэг вэ?", a: ["Гол мөрөн", "Нуур", "Мөсөн гол", "Гуний ус"], c: 1 },
+        { q: "Монгол орны хамгийн их усны нөөцтэй нуур аль нь вэ?", a: ["Увс нуур", "Хөвсгөл нуур", "Хяргас нуур", "Буйр нуур"], c: 1 },
+        { q: "Монгол орны гол мөрөн дэлхийн хэдэн ай савд хуваагддаг вэ?", a: ["2", "3", "4", "5"], c: 1 },
+        { q: "Номхон далайн ай савд хамаарах голыг нэрлэнэ үү.", a: ["Сэлэнгэ", "Онон", "Тэсийн гол", "Ховд гол"], c: 1 },
+        { q: "Хойд мөсөн далайн ай савд аль гол багтдаг вэ?", a: ["Хэрлэн", "Онон", "Сэлэнгэ", "Улз гол"], c: 2 },
+        { q: "Гадагшаа урсгалгүй төв азийн ай савын хамгийн том гол аль нь вэ?", a: ["Сэлэнгэ", "Ховд гол", "Онон", "Хэрлэн"], c: 1 },
+        { q: "Монгол орны гол мөрний тэжээлийн үндсэн эх үүсвэр юу вэ?", a: ["Хур тунадас", "Мөсөн гол", "Гүний ус", "Бүгд зөв"], c: 3 },
+        { q: "Хамгийн их талбайтай нуур аль нь вэ?", a: ["Хөвсгөл", "Увс нуур", "Хяргас", "Өгий нуур"], c: 1 },
+        { q: "Сэлэнгэ мөрөн аль нуурт цутгадаг вэ?", a: ["Хөвсгөл", "Байгал нуур", "Увс нуур", "Буйр нуур"], c: 1 },
+        { q: "Монгол орны хамгийн урт гол аль нь вэ?", a: ["Орхон гол", "Хэрлэн гол", "Сэлэнгэ мөрөн", "Завхан гол"], c: 1 },
+        { q: "Усны эрдэсжилт хамгийн багатай нуурыг юу гэх вэ?", a: ["Шорвог нуур", "Цэнгэг нуур", "Гашуун нуур", "Эрдэст нуур"], c: 1 },
+        { q: "Монгол орны мөсөн голууд голцуу хаана байрладаг вэ?", a: ["Хангайн нуруу", "Хэнтийн нуруу", "Монгол Алтайн нуруу", "Говь-Алтай"], c: 2 },
+        { q: "Голын усны түвшин хамгийн ихээр нэмэгдэх үеийг юу гэх вэ?", a: ["Татралт", "Үер", "Дунд түвшин", "Урсгал"], c: 1 },
+        { q: "Монгол орны усны нөөцийн хэдэн хувийг гүний ус бүрдүүлдэг вэ?", a: ["~1.9%", "~20%", "~80%", "~50%"], c: 0 },
+        { q: "Улз, Хэрлэн, Онон голууд аль ай савд багтах вэ?", a: ["Хойд мөсөн далай", "Номхон далай", "Төв Азийн ай сав", "Энэтхэгийн далай"], c: 1 }
+    ];
+
+    let current = 0, score = 0, sName = "", timeLeft = 30, timer;
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYYHD4Euuspk1GrSCs2s5FIMi4Rgqmzgmh4jbZwFHofyA0ELewsVt7FtdS7IgjgCki/exec";
+
+    function startQuiz() {
+        sName = document.getElementById('student-name').value;
+        if(!sName.trim()) return alert("Нэрээ оруулна уу!");
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        showQ();
+    }
+
+    function showQ() {
+        if(current >= questions.length) return finish();
+        const q = questions[current];
+        document.getElementById('q-count').innerText = `Асуулт ${current + 1} / 15`;
+        document.getElementById('question-text').innerText = q.q;
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        q.a.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn animate__animated animate__fadeInUp';
+            btn.innerText = opt;
+            btn.onclick = () => check(idx, btn);
+            container.appendChild(btn);
+        });
+        startTimer();
+    }
+
+    function startTimer() {
+        clearInterval(timer); timeLeft = 30;
+        document.getElementById('timer-display').innerText = timeLeft;
+        timer = setInterval(() => {
+            timeLeft--; document.getElementById('timer-display').innerText = timeLeft;
+            if(timeLeft <= 0) { clearInterval(timer); check(-1, null); }
+        }, 1000);
+    }
+
+    function check(idx, btn) {
+        clearInterval(timer);
+        const icon = document.getElementById('feedback-icon');
+        if(idx === questions[current].c) {
+            score++;
+            if(btn) btn.style.background = "var(--success)";
+            icon.innerHTML = "✅";
+            document.getElementById('snd-correct').play();
+            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        } else {
+            if(btn) btn.style.background = "var(--error)";
+            icon.innerHTML = "❌";
+            document.getElementById('snd-wrong').play();
+        }
+        setTimeout(() => { icon.innerHTML = ""; current++; showQ(); }, 1200);
+    }
+
+    function finish() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        document.getElementById('final-score').innerText = score + "/15";
+        document.getElementById('snd-win').play();
+        
+        let msg = score >= 13 ? "Маш сайн байна! Та Монгол орныхоо усны нөөцийг сайн судалжээ. 🌟" : 
+                  (score >= 9 ? "Сайн байна, зарим нэг гол мөрөн, ай савыг дахин нягтлаарай. 👍" : 
+                  "Сурах бичгийн Усны нөөц бүлгийг дахин нэг уншаад туршаад үзээрэй! 💪");
+        document.getElementById('feedback-msg').innerText = msg;
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ "Сурагч": sName, "Оноо": score, "Сэдэв": "8-р анги Газарзүй Усны нөөц", "Дүгнэлт": msg }),
+            headers: { 'Content-Type': 'application/json' }
+        }).then(() => document.getElementById('status-text').innerText = "Багшид амжилттай илгээгдлээ ✅");
+    }
+</script>
+</body>
+</html>
